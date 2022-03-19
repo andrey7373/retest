@@ -1,54 +1,28 @@
-#!/bin/bash
+{
+  "name": "Free fly to Heroku.",
+  "description": "Free fly to Heroku.",
+  "keywords": ["V2ray", "Shadowsocks", "V2Ray-plugin"],
+  "env": {
+     "ENCRYPT": {
+      "description": "Shadowsocks encryption method.",
+      "value": "chacha20-ietf-poly1305"
+    },
+     "PASSWORD": {
+      "description": "The password of shadowsocks, you can use uuid as the password (http://www.uuid.online/ online generation)",
+      "value": "5c301bb8-6c77-41a0-a606-4ba11bbab084"
+    },
 
-if [[ -z "${PASSWORD}" ]]; then
-  export PASSWORD="5c301bb8-6c77-41a0-a606-4ba11bbab084"
-fi
-echo ${PASSWORD}
+     "AppName": {
+      "description": "App Name filled in at the top (or even full domain if there is a custom one) to generate the configuration and QR code. If you don’t want to generate it, enter no",
+      "value": "no"
+    },
 
-export PASSWORD_JSON="$(echo -n "$PASSWORD" | jq -Rc)"
-
-if [[ -z "${ENCRYPT}" ]]; then
-  export ENCRYPT="chacha20-ietf-poly1305"
-fi
-
-if [[ -z "${V2_Path}" ]]; then
-  export V2_Path="s233"
-fi
-echo ${V2_Path}
-
-if [[ -z "${QR_Path}" ]]; then
-  export QR_Path="/qr_img"
-fi
-echo ${QR_Path}
-
-case "$AppName" in
-	*.*)
-		export DOMAIN="$AppName"
-		;;
-	*)
-		export DOMAIN="$AppName.herokuapp.com"
-		;;
-esac
-
-bash /conf/shadowsocks-libev_config.json >  /etc/shadowsocks-libev/config.json
-echo /etc/shadowsocks-libev/config.json
-cat /etc/shadowsocks-libev/config.json
-
-bash /conf/nginx_ss.conf > /etc/nginx/conf.d/ss.conf
-echo /etc/nginx/conf.d/ss.conf
-cat /etc/nginx/conf.d/ss.conf
-
-
-if [ "$AppName" = "no" ]; then
-  echo "Do not generate QR-code"
-else
-  [ ! -d /wwwroot/${QR_Path} ] && mkdir /wwwroot/${QR_Path}
-  plugin=$(echo -n "v2ray;path=/${V2_Path};host=${DOMAIN};tls" | sed -e 's/\//%2F/g' -e 's/=/%3D/g' -e 's/;/%3B/g')
-  ss="ss://$(echo -n ${ENCRYPT}:${PASSWORD} | base64 -w 0)@${DOMAIN}:443?plugin=${plugin}" 
-  echo "${ss}" | tr -d '\n' > /wwwroot/${QR_Path}/index.html
-  echo -n "${ss}" | qrencode -s 6 -o /wwwroot/${QR_Path}/vpn.png
-fi
-
-ss-server -c /etc/shadowsocks-libev/config.json &
-rm -rf /etc/nginx/sites-enabled/default
-nginx -g 'daemon off;'
+    "QR_Path": {
+       "description": "QR code and configuration link path, the default qr_img, you can also use uuid for confidentiality, but it cannot be the same as V2_Path. If the AppName variable is no, this variable has no effect",
+       "value": "/qr"
+     }
+  },
+  "website": "",
+  "repository": "",
+  "stack": "container"
+ }
