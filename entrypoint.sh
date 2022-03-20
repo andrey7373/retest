@@ -127,7 +127,7 @@ conn IPSec-IKEv2-EAP
 conn IKEv2-MSCHAPv2-Apple
 	also="IPSec-IKEv2"
 	rightauth=eap-mschapv2
-	leftid=
+	leftid=@alpatski.asuscomm.com
 
 # Android IPsec Hybrid RSA
 conn IKEv1-Xauth
@@ -156,7 +156,7 @@ systemctl restart strongswan
 
 # Включить брандмауэр
 ufw allow OpenSSH
-ufw enable
+ufw --force enable
 
 # Разрешать трафик UDP на стандартных портах IPSec, 500 и 4500:
 ufw allow 500,4500/udp
@@ -309,5 +309,5 @@ net/ipv4/ip_no_pmtu_disc=1
 EOF
 
 # Применить настройки перезапустив брандмауэр:
-ufw disable
-ufw enable
+ufw --force disable
+ufw --force enable
