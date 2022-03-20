@@ -123,7 +123,7 @@ conn IPSec-IKEv2-EAP
 conn IKEv2-MSCHAPv2-Apple
 	also="IPSec-IKEv2"
 	rightauth=eap-mschapv2
-	leftid=@e1-blighttiger368.herokuapp.com
+leftid=@e1-blighttiger.herokuapp.com
 # Android IPsec Hybrid RSA
 conn IKEv1-Xauth
 	keyexchange=ikev1
