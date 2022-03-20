@@ -8,3 +8,5 @@ RUN set -ex\
     && apt install -y -q wget strongswan strongswan-pki libcharon-extra-plugins libstrongswan-extra-plugins ufw nano \
     && apt clean -y \
     && chmod +x /entrypoint.sh \
+
+CMD /entrypoint.sh
