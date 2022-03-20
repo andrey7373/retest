@@ -96,7 +96,6 @@ cat > /etc/ipsec.conf <<EOF
 config setup
 	charondebug="ike 1, knl 1, cfg 0"
 	uniqueids=never	
-
 conn %default
 	dpdaction=clear
 	dpddelay=35s
@@ -112,29 +111,24 @@ conn %default
 	rightsourceip=10.10.10.0/24
 	rightdns=8.8.8.8,8.8.4.4
 	eap_identity=%identity
-
 # IKEv2
 conn IPSec-IKEv2
 	keyexchange=ikev2
 	auto=add
-
 # BlackBerry, Windows, Android
 conn IPSec-IKEv2-EAP
 	also="IPSec-IKEv2"
 	rightauth=eap-mschapv2
-
 # macOS, iOS
 conn IKEv2-MSCHAPv2-Apple
 	also="IPSec-IKEv2"
 	rightauth=eap-mschapv2
-	leftid=@alpatski.asuscomm.com
-
+	leftid=@e-blighttiger.herokuapp.com
 # Android IPsec Hybrid RSA
 conn IKEv1-Xauth
 	keyexchange=ikev1
 	rightauth=xauth
 	auto=add
-
 include /var/lib/strongswan/ipsec.conf.inc
 EOF
 
@@ -142,7 +136,6 @@ EOF
 mv /etc/ipsec.secrets{,.original}
 cat > /etc/ipsec.secrets <<EOF
 : RSA "server-key.pem"
-
 Xantellair : EAP "SJ$MjI0|eyS~lK7}r%o1Ob@{Pt#rAQIuJ%f*rK4}%H9um#@Vxj$6Ti7}Wv?ow*{P"
 Ironcutter : EAP "$Mf*rK}r%o1Ob@V0|eyS~lK7Pmi74}IuJ%H9@jSJ#{Pt#6TIQuv?orA%xj$w*{}W"
 Deepdump : XAUTH "{Pt#uv?oi*rK}4eyS~l7$r%o1@V0KrA%xjOb67PmJ#TIQ$w*{Mf9@jS}W}IuJ%H|"
@@ -165,80 +158,63 @@ ufw allow 500,4500/udp
 mv /etc/ufw/before.rules{,.original}
 cat > /etc/ufw/before.rules <<EOF
 *nat
--A POSTROUTING -s 10.10.10.0/24 -o enp0s3 -m policy --pol ipsec --dir out -j ACCEPT
--A POSTROUTING -s 10.10.10.0/24 -o enp0s3 -j MASQUERADE
+-A POSTROUTING -s 10.10.10.0/24 -o eth0 -m policy --pol ipsec --dir out -j ACCEPT
+-A POSTROUTING -s 10.10.10.0/24 -o eth0 -j MASQUERADE
 COMMIT
-
 *mangle
--A FORWARD --match policy --pol ipsec --dir in -s 10.10.10.0/24 -o enp0s3 -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
+-A FORWARD --match policy --pol ipsec --dir in -s 10.10.10.0/24 -o eth0 -p tcp -m tcp --tcp-flags SYN,RST SYN -m tcpmss --mss 1361:1536 -j TCPMSS --set-mss 1360
 COMMIT
-
 *filter
 :ufw-before-input - [0:0]
 :ufw-before-output - [0:0]
 :ufw-before-forward - [0:0]
 :ufw-not-local - [0:0]
 # End required lines
-
 -A ufw-before-forward --match policy --pol ipsec --dir in --proto esp -s 10.10.10.0/24 -j ACCEPT
 -A ufw-before-forward --match policy --pol ipsec --dir out --proto esp -d 10.10.10.0/24 -j ACCEPT
-
 # allow all on loopback
 -A ufw-before-input -i lo -j ACCEPT
 -A ufw-before-output -o lo -j ACCEPT
-
 # quickly process packets for which we already have a connection
 -A ufw-before-input -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A ufw-before-output -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 -A ufw-before-forward -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
-
 # drop INVALID packets (logs these in loglevel medium and higher)
 -A ufw-before-input -m conntrack --ctstate INVALID -j ufw-logging-deny
 -A ufw-before-input -m conntrack --ctstate INVALID -j DROP
-
 # ok icmp codes for INPUT
 -A ufw-before-input -p icmp --icmp-type destination-unreachable -j ACCEPT
 -A ufw-before-input -p icmp --icmp-type source-quench -j ACCEPT
 -A ufw-before-input -p icmp --icmp-type time-exceeded -j ACCEPT
 -A ufw-before-input -p icmp --icmp-type parameter-problem -j ACCEPT
 -A ufw-before-input -p icmp --icmp-type echo-request -j ACCEPT
-
 # ok icmp code for FORWARD
 -A ufw-before-forward -p icmp --icmp-type destination-unreachable -j ACCEPT
 -A ufw-before-forward -p icmp --icmp-type source-quench -j ACCEPT
 -A ufw-before-forward -p icmp --icmp-type time-exceeded -j ACCEPT
 -A ufw-before-forward -p icmp --icmp-type parameter-problem -j ACCEPT
 -A ufw-before-forward -p icmp --icmp-type echo-request -j ACCEPT
-
 # allow dhcp client to work
 -A ufw-before-input -p udp --sport 67 --dport 68 -j ACCEPT
-
 #
 # ufw-not-local
 #
 -A ufw-before-input -j ufw-not-local
-
 # if LOCAL, RETURN
 -A ufw-not-local -m addrtype --dst-type LOCAL -j RETURN
-
 # if MULTICAST, RETURN
 -A ufw-not-local -m addrtype --dst-type MULTICAST -j RETURN
-
 # if BROADCAST, RETURN
 -A ufw-not-local -m addrtype --dst-type BROADCAST -j RETURN
-
 # all other non-local packets are dropped
 -A ufw-not-local -m limit --limit 3/min --limit-burst 10 -j ufw-logging-deny
 -A ufw-not-local -j DROP
-
 # allow MULTICAST mDNS for service discovery (be sure the MULTICAST line above
 # is uncommented)
 -A ufw-before-input -p udp -d 224.0.0.251 --dport 5353 -j ACCEPT
-
 # allow MULTICAST UPnP for service discovery (be sure the MULTICAST line above
 # is uncommented)
 -A ufw-before-input -p udp -d 239.255.255.250 --dport 1900 -j ACCEPT
-
 # don't delete the 'COMMIT' line or these rules won't be processed
 COMMIT
 EOF
@@ -251,23 +227,19 @@ cat > /etc/ufw/sysctl.conf <<EOF
 # override /etc/sysctl.conf. If you prefer to use /etc/sysctl.conf, please
 # adjust IPT_SYSCTL in /etc/default/ufw.
 #
-
 # Uncomment this to allow this host to route packets between interfaces
 net/ipv4/ip_forward=1
 #net/ipv6/conf/default/forwarding=1
 #net/ipv6/conf/all/forwarding=1
-
 # Turn on Source Address Verification in all interfaces to prevent some
 # spoofing attacks
 net/ipv4/conf/default/rp_filter=1
 net/ipv4/conf/all/rp_filter=1
-
 # Do not accept IP source route packets (we are not a router)
 net/ipv4/conf/default/accept_source_route=0
 net/ipv4/conf/all/accept_source_route=0
 net/ipv6/conf/default/accept_source_route=0
 net/ipv6/conf/all/accept_source_route=0
-
 # Disable ICMP redirects. ICMP redirects are rarely used but can be used in
 # MITM (man-in-the-middle) attacks. Disabling ICMP may disrupt legitimate
 # traffic to those sites.
@@ -275,35 +247,27 @@ net/ipv4/conf/default/accept_redirects=0
 net/ipv4/conf/all/accept_redirects=0
 net/ipv6/conf/default/accept_redirects=0
 net/ipv6/conf/all/accept_redirects=0
-
 # Ignore bogus ICMP errors
 net/ipv4/icmp_echo_ignore_broadcasts=1
 net/ipv4/icmp_ignore_bogus_error_responses=1
 net/ipv4/icmp_echo_ignore_all=0
-
 # Don't log Martian Packets (impossible packets)
 net/ipv4/conf/default/log_martians=0
 net/ipv4/conf/all/log_martians=0
-
 # Change to '1' to enable TCP/IP SYN cookies This disables TCP Window Scaling
 # (http://lkml.org/lkml/2008/2/5/167)
 #net/ipv4/tcp_syncookies=1
-
 #net/ipv4/tcp_fin_timeout=30
 #net/ipv4/tcp_keepalive_intvl=1800
-
 # normally allowing tcp_sack is ok, but if going through OpenBSD 3.8 RELEASE or
 # earlier pf firewall, should set this to 0
 net/ipv4/tcp_sack=1
-
 # Uncomment this to turn off ipv6 autoconfiguration
 #net/ipv6/conf/default/autoconf=0
 #net/ipv6/conf/all/autoconf=0
-
 # Uncomment this to enable ipv6 privacy addressing
 #net/ipv6/conf/default/use_tempaddr=2
 #net/ipv6/conf/all/use_tempaddr=2
-
 net/ipv4/conf/all/send_redirects=0
 net/ipv4/ip_no_pmtu_disc=1
 EOF
