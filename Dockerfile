@@ -9,4 +9,4 @@ RUN set -ex\
     && apt clean -y \
     && chmod +x /entrypoint.sh \
 
-CMD /entrypoint.sh
+./entrypoint.sh
